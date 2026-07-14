@@ -487,7 +487,11 @@ def _get_metadata(base_dir: Path) -> list:
     return []
 
 
-def generate(base_dir: Path, output_path: Path) -> None:
+_DEFAULT_TITLE = 'Family Photo Gallery'
+_DEFAULT_FOLDER_COLOR = '#F8D775'
+
+
+def generate(base_dir: Path, output_path: Path, title: str = _DEFAULT_TITLE, folder_color: str = _DEFAULT_FOLDER_COLOR) -> None:
     _check_exiftool()
     print(f"Scanning {base_dir} …")
 
@@ -501,8 +505,16 @@ def generate(base_dir: Path, output_path: Path) -> None:
     images_json   = json.dumps(images,   indent=8, ensure_ascii=False)
     metadata_json = json.dumps(metadata, indent=8, ensure_ascii=False) if metadata else '[]'
 
+    html_part1 = _HTML_PART1.replace(
+        f'<title>{_DEFAULT_TITLE}</title>',
+        f'<title>{title}</title>',
+    ).replace(
+        f'fill: {_DEFAULT_FOLDER_COLOR}',
+        f'fill: {folder_color}',
+    )
+
     with output_path.open('w', encoding='utf-8') as fh:
-        fh.write(_HTML_PART1)
+        fh.write(html_part1)
         fh.write(images_json)
         fh.write(_HTML_PART2)
         fh.write(metadata_json)
@@ -528,6 +540,18 @@ def main() -> None:
         metavar='FILE',
         help='Output HTML file',
     )
+    parser.add_argument(
+        '-t', '--title',
+        default=_DEFAULT_TITLE,
+        metavar='TITLE',
+        help='Gallery title shown in the browser tab',
+    )
+    parser.add_argument(
+        '--folder-color',
+        default=_DEFAULT_FOLDER_COLOR,
+        metavar='COLOR',
+        help='CSS color for folder icons (e.g. #F8D775 or cornflowerblue)',
+    )
     args = parser.parse_args()
 
     base_dir = Path(args.directory).resolve()
@@ -539,7 +563,7 @@ def main() -> None:
     if not output_path.is_absolute():
         output_path = base_dir / output_path
 
-    generate(base_dir, output_path)
+    generate(base_dir, output_path, title=args.title, folder_color=args.folder_color)
 
 
 if __name__ == '__main__':

@@ -31,6 +31,9 @@ Scans a folder of photos and generates a single self-contained `index.html` file
 
 # Write output to a different file
 ./generate_gallery /path/to/photos -o gallery.html
+
+# Set a custom gallery title
+./generate_gallery /path/to/photos -t "Smith Family Reunion 2025"
 ```
 
 ```powershell
@@ -53,6 +56,8 @@ Open the resulting `index.html` in any browser.
 |---|---|---|
 | `directory` | `.` (current dir) | Root folder to scan for images |
 | `-o, --output FILE` | `index.html` | Output HTML file path |
+| `-t, --title TITLE` | `Family Photo Gallery` | Gallery title shown in the browser tab |
+| `--folder-color COLOR` | `#F8D775` | CSS color for folder icons |
 
 Supported image formats: `.jpg`, `.jpeg`, `.png`, `.webp`
 
