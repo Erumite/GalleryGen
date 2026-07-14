@@ -1,2 +1,7 @@
 sample
 index.html
+
+# PyInstaller build output
+build/
+dist/
+generate_gallery.spec
