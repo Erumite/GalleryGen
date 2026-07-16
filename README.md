@@ -9,6 +9,22 @@ Scans a folder of photos and generates a single self-contained `index.html` file
 - Face detection bounding boxes (hover to reveal names) from EXIF region data
 - Captions, people, and tags shown per photo
 - Search across filenames, captions, tags, and tagged people names
+- Slideshow mode with auto-hiding controls, configurable speed, shuffle, and scope selection
+
+## Slideshow
+
+Click the **▶ play button** (to the right of the search icon) to launch the slideshow. Controls appear when you move the mouse and fade out after a few seconds.
+
+| Control | Action |
+|---|---|
+| **This Folder / + Subfolders / All** | Scope — which images to include |
+| **❮ / ❯** | Previous / next image |
+| **⏸ / ▶** | Pause / resume auto-advance |
+| **Speed** | Interval between slides (1 s – 30 s) |
+| **⇄ Shuffle** | Toggle random vs. sequential order |
+| **✕** | Exit slideshow |
+
+**Keyboard shortcuts:** `←` / `→` navigate, `Space` toggles play/pause, `Esc` closes.
 
 ## Requirements
 
