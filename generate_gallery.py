@@ -24,7 +24,7 @@ _HTML_PART1 = r"""<!DOCTYPE html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Family Photo Gallery</title>
+    <title>Photo Gallery</title>
     <style>
         :root { --bg: #1e1e1e; --surface: #2d2d2d; --text: #ffffff; --accent: #4CAF50; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 20px; }
@@ -487,7 +487,7 @@ def _get_metadata(base_dir: Path) -> list:
     return []
 
 
-_DEFAULT_TITLE = 'Family Photo Gallery'
+_DEFAULT_TITLE = 'Photo Gallery'
 _DEFAULT_FOLDER_COLOR = '#F8D775'
 
 
