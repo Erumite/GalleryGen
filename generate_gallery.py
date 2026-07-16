@@ -80,6 +80,22 @@ _HTML_PART1 = r"""<!DOCTYPE html>
         #next { right: 30px; }
         #close { position: absolute; top: 20px; right: 30px; font-size: 50px; color: white; cursor: pointer; }
         .disabled { opacity: 0.2; pointer-events: none; }
+
+        /* ── Slideshow ──────────────────────────────────────────────── */
+        #slideshow-toggle { cursor: pointer; color: #aaa; padding: 4px 6px; border-radius: 6px; line-height: 0; transition: 0.2s; }
+        #slideshow-toggle:hover { color: var(--accent); }
+        #slideshow-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; justify-content: center; align-items: center; }
+        #slideshow-img { max-width: 100vw; max-height: 100vh; object-fit: contain; display: block; user-select: none; }
+        #slideshow-hud { position: fixed; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,0.88)); padding: 48px 24px 18px; display: flex; align-items: center; gap: 8px; transition: opacity 0.4s; z-index: 2001; flex-wrap: wrap; }
+        #ss-spacer { flex: 1; }
+        #ss-counter { color: #bbb; font-size: 13px; min-width: 64px; text-align: center; }
+        .ss-btn { background: rgba(255,255,255,0.15); color: white; border: none; border-radius: 8px; padding: 7px 12px; cursor: pointer; font-size: 14px; transition: background 0.2s; white-space: nowrap; line-height: 1.2; }
+        .ss-btn:hover { background: rgba(255,255,255,0.3); }
+        .ss-btn.ss-active { background: var(--accent); }
+        .ss-sep { width: 1px; height: 28px; background: rgba(255,255,255,0.22); margin: 0 4px; align-self: center; flex-shrink: 0; }
+        #ss-speed-select { background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.22); border-radius: 8px; padding: 7px 10px; font-size: 14px; cursor: pointer; }
+        #ss-speed-select option { background: #2d2d2d; color: white; }
+        #ss-scope-group, #ss-nav-group { display: flex; gap: 4px; }
     </style>
 </head>
 <body>
@@ -95,6 +111,9 @@ _HTML_PART1 = r"""<!DOCTYPE html>
                 </div>
                 <div id="search-toggle" onclick="toggleSearch()" title="Search photos">
                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                </div>
+                <div id="slideshow-toggle" onclick="openSlideshow()" title="Slideshow">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                 </div>
             </div>
         </div>
@@ -121,6 +140,37 @@ _HTML_PART1 = r"""<!DOCTYPE html>
         </div>
 
         <div id="next" class="nav-btn" onclick="nextImage(event)">&#10095;</div>
+    </div>
+
+    <div id="slideshow-overlay">
+        <img id="slideshow-img" src="" alt="Slideshow photo" />
+        <div id="slideshow-hud">
+            <div id="ss-scope-group">
+                <button class="ss-btn ss-active" id="ss-scope-folder" onclick="setSsScope('folder')">This Folder</button>
+                <button class="ss-btn" id="ss-scope-tree" onclick="setSsScope('tree')">+ Subfolders</button>
+                <button class="ss-btn" id="ss-scope-all" onclick="setSsScope('all')">All</button>
+            </div>
+            <div class="ss-sep"></div>
+            <div id="ss-nav-group">
+                <button class="ss-btn" onclick="ssPrev()" title="Previous">&#10094;</button>
+                <button class="ss-btn" id="ss-play-pause" onclick="toggleSsPlay()" title="Play / Pause">&#x23F8;</button>
+                <button class="ss-btn" onclick="ssNext()" title="Next">&#10095;</button>
+            </div>
+            <span id="ss-counter">1 / 0</span>
+            <div class="ss-sep"></div>
+            <select id="ss-speed-select" onchange="setSsSpeed(parseInt(this.value))" title="Slide interval">
+                <option value="1000">1 s</option>
+                <option value="2000">2 s</option>
+                <option value="3000">3 s</option>
+                <option value="5000" selected>5 s</option>
+                <option value="8000">8 s</option>
+                <option value="15000">15 s</option>
+                <option value="30000">30 s</option>
+            </select>
+            <button class="ss-btn" id="ss-random-btn" onclick="toggleSsRandom()" title="Shuffle / Sequential">&#x21C4; Shuffle</button>
+            <div id="ss-spacer"></div>
+            <button class="ss-btn" onclick="stopSlideshow()" title="Close slideshow">&#10005;</button>
+        </div>
     </div>
 
     <script>
@@ -345,14 +395,6 @@ _HTML_PART3 = r"""
             if (e.target === lightbox || e.target.classList.contains('lightbox-content-wrapper')) closeLightbox();
         });
 
-        document.addEventListener('keydown', (e) => {
-            if (lightbox.style.display === 'flex') {
-                if (e.key === 'ArrowLeft')  prevImage();
-                if (e.key === 'ArrowRight') nextImage();
-                if (e.key === 'Escape')     closeLightbox();
-            }
-        });
-
         function toggleSearch() {
             const bar = document.getElementById('search-bar');
             const toggle = document.getElementById('search-toggle');
@@ -425,6 +467,160 @@ _HTML_PART3 = r"""
             document.getElementById('search-input').value = '';
             renderFolder(currentFolderPath);
         }
+
+        // ── Slideshow ────────────────────────────────────────────────
+        const ss = {
+            images: [], index: 0, playing: true,
+            speed: 5000, random: false, scope: 'folder',
+            timer: null, hudTimer: null
+        };
+
+        function buildSlideshowImages() {
+            if (ss.scope === 'all') {
+                return imagePaths.map(p => ({ name: p.split('/').pop(), path: p }));
+            }
+            if (ss.scope === 'tree') {
+                const prefix = currentFolderPath ? currentFolderPath + '/' : '';
+                return imagePaths
+                    .filter(p => currentFolderPath === '' ? true : p.startsWith(prefix))
+                    .map(p => ({ name: p.split('/').pop(), path: p }));
+            }
+            // 'folder' — only direct images in the current folder
+            const fd = fileTree[currentFolderPath];
+            return fd ? fd.images.slice().sort((a, b) => a.name.localeCompare(b.name)) : [];
+        }
+
+        function openSlideshow() {
+            ss.images = buildSlideshowImages();
+            if (ss.images.length === 0) return;
+            ss.index = 0;
+            ss.playing = true;
+            document.getElementById('slideshow-overlay').style.display = 'flex';
+            updateSsImg();
+            updateSsUI();
+            scheduleSsAdvance();
+            showSsHud();
+        }
+
+        function stopSlideshow() {
+            ss.playing = false;
+            clearTimeout(ss.timer);
+            clearTimeout(ss.hudTimer);
+            document.getElementById('slideshow-overlay').style.display = 'none';
+            document.getElementById('slideshow-img').src = '';
+        }
+
+        function updateSsImg() {
+            if (!ss.images.length) return;
+            document.getElementById('slideshow-img').src = encodeURI(ss.images[ss.index].path);
+            document.getElementById('ss-counter').textContent =
+                (ss.index + 1) + ' / ' + ss.images.length;
+        }
+
+        function scheduleSsAdvance() {
+            clearTimeout(ss.timer);
+            if (ss.playing && ss.images.length > 1) {
+                ss.timer = setTimeout(ssNext, ss.speed);
+            }
+        }
+
+        function ssNext() {
+            clearTimeout(ss.timer);
+            if (!ss.images.length) return;
+            ss.index = ss.random
+                ? Math.floor(Math.random() * ss.images.length)
+                : (ss.index + 1) % ss.images.length;
+            updateSsImg();
+            scheduleSsAdvance();
+        }
+
+        function ssPrev() {
+            clearTimeout(ss.timer);
+            if (!ss.images.length) return;
+            ss.index = ss.random
+                ? Math.floor(Math.random() * ss.images.length)
+                : (ss.index - 1 + ss.images.length) % ss.images.length;
+            updateSsImg();
+            scheduleSsAdvance();
+        }
+
+        function toggleSsPlay() {
+            ss.playing = !ss.playing;
+            if (ss.playing) scheduleSsAdvance();
+            else clearTimeout(ss.timer);
+            updateSsUI();
+        }
+
+        function setSsSpeed(ms) {
+            ss.speed = ms;
+            scheduleSsAdvance();
+        }
+
+        function toggleSsRandom() {
+            ss.random = !ss.random;
+            updateSsUI();
+        }
+
+        function setSsScope(scope) {
+            ss.scope = scope;
+            ss.images = buildSlideshowImages();
+            ss.index = 0;
+            updateSsImg();
+            updateSsUI();
+            scheduleSsAdvance();
+        }
+
+        function updateSsUI() {
+            document.getElementById('ss-play-pause').innerHTML = ss.playing ? '&#x23F8;' : '&#x25B6;';
+            document.getElementById('ss-random-btn').classList.toggle('ss-active', ss.random);
+            ['folder', 'tree', 'all'].forEach(s => {
+                const el = document.getElementById('ss-scope-' + s);
+                if (el) el.classList.toggle('ss-active', ss.scope === s);
+            });
+            document.getElementById('ss-counter').textContent = ss.images.length
+                ? (ss.index + 1) + ' / ' + ss.images.length
+                : '0 / 0';
+        }
+
+        function showSsHud() {
+            const hud = document.getElementById('slideshow-hud');
+            hud.style.opacity = '1';
+            hud.style.pointerEvents = 'auto';
+            clearTimeout(ss.hudTimer);
+            ss.hudTimer = setTimeout(hideSsHud, 3500);
+        }
+
+        function hideSsHud() {
+            const hud = document.getElementById('slideshow-hud');
+            hud.style.opacity = '0';
+            hud.style.pointerEvents = 'none';
+        }
+
+        const ssOverlay = document.getElementById('slideshow-overlay');
+        const ssHud = document.getElementById('slideshow-hud');
+
+        ssOverlay.addEventListener('mousemove', showSsHud);
+        ssOverlay.addEventListener('click', (e) => {
+            if (e.target === ssOverlay || e.target.id === 'slideshow-img') showSsHud();
+        });
+        // Keep HUD visible while hovering controls
+        ssHud.addEventListener('mouseenter', () => clearTimeout(ss.hudTimer));
+        ssHud.addEventListener('mouseleave', () => {
+            ss.hudTimer = setTimeout(hideSsHud, 2000);
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (ssOverlay.style.display === 'flex') {
+                if (e.key === 'ArrowLeft')  { ssPrev(); showSsHud(); }
+                if (e.key === 'ArrowRight') { ssNext(); showSsHud(); }
+                if (e.key === ' ')          { e.preventDefault(); toggleSsPlay(); showSsHud(); }
+                if (e.key === 'Escape')     stopSlideshow();
+            } else if (lightbox.style.display === 'flex') {
+                if (e.key === 'ArrowLeft')  prevImage();
+                if (e.key === 'ArrowRight') nextImage();
+                if (e.key === 'Escape')     closeLightbox();
+            }
+        });
 
         renderFolder("");
     </script>
