@@ -15,6 +15,14 @@ import subprocess
 import sys
 from pathlib import Path
 
+
+def _pause_if_gui_launch() -> None:
+    """On Windows, if launched by double-clicking (no console), pause so the
+    user can read any error message before the window closes."""
+    if sys.platform == 'win32' and getattr(sys, 'frozen', False) and len(sys.argv) == 1:
+        input("\nPress Enter to close...")
+
+
 # ---------------------------------------------------------------------------
 # HTML template — split at the two injection points
 # ---------------------------------------------------------------------------
@@ -640,6 +648,7 @@ def _check_exiftool() -> None:
     except FileNotFoundError:
         print("Error: 'exiftool' is not installed or not in PATH.", file=sys.stderr)
         print("Download it from https://exiftool.org", file=sys.stderr)
+        _pause_if_gui_launch()
         sys.exit(1)
 
 
@@ -753,6 +762,7 @@ def main() -> None:
     base_dir = Path(args.directory).resolve()
     if not base_dir.is_dir():
         print(f"Error: '{base_dir}' is not a directory.", file=sys.stderr)
+        _pause_if_gui_launch()
         sys.exit(1)
 
     output_path = Path(args.output)
